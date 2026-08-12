@@ -10,12 +10,12 @@ from decouple import AutoConfig
 
 config = AutoConfig()
 
-send_to = "csv/check.csv"
-subject = "You're invited to DeerUtsav 10.0!"
+send_to = "./csv/extra.csv"
+subject = "Invitation | Graduation of Class of 2026"
 image_path = "./images/"
-invitation_path = "./images/invitation cards/"
+invitation_path = "./images/invitation cards/Students/"
 template_path = "./templates/index.html"
-logo_path = os.path.join(image_path, "logo/mainLogo.png") 
+logo_path = os.path.join(image_path, "logo/Logo.png") 
 
 def load_template(template_path):
     with open(template_path, 'r') as file:
@@ -60,12 +60,12 @@ def send_mail():
                 continue
 
             msg = MIMEMultipart()
-            msg['From'] = f"DeerUtsav <{email}>"
+            msg['From'] = f"Graduation Ceremony <{email}>"
             msg['To'] = recipient_email
             msg['Subject'] = subject
 
             email_content = email_template.replace("{{Name}}", recipient_name)
-            email_content = email_content.replace("../images/logo/mainLogo.png", f"cid:{logo_cid}")
+            email_content = email_content.replace("../images/logo/logo.png", f"cid:{logo_cid}")
 
             msg.attach(MIMEText(email_content, "html"))
 
