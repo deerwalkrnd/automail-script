@@ -4,6 +4,7 @@ import pandas as pd
 
 from decouple import AutoConfig
 from smtplib import SMTP
+from urllib.parse import quote
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -30,6 +31,49 @@ logo_path = os.path.join(
     image_path,
     "logo/Logo.png"
 )
+
+
+# =========================
+# RSVP (guest invitations)
+# =========================
+#
+# Only used when the template contains an RSVP button,
+# i.e. templates/guest.html. Leave rsvp_link empty for
+# the student and teacher templates.
+#
+
+# Google Form link, or any URL that collects responses.
+rsvp_link = (
+    "https://docs.google.com/forms/d/e/"
+    "1FAIpQLSeA_v63CVtJdfqfX0tDoNNAyxHyPtAzzSYGsK5asqatkkHmHg/"
+    "viewform"
+)
+
+# Shown under the button, e.g. "5 September 2026".
+rsvp_deadline = ""
+
+# Optional. Pre-fills the guest's name in a Google Form so
+# you know who responded without them typing it.
+#
+# To find it: open your form, Preview, right-click the name
+# field, Inspect, and look for name="entry.123456789".
+#
+rsvp_name_entry = ""
+
+
+def build_rsvp_link(recipient_name):
+    """Return the RSVP url, pre-filled with the name if configured."""
+
+    if not rsvp_link or not rsvp_name_entry:
+        return rsvp_link
+
+    separator = "&" if "?" in rsvp_link else "?"
+
+    return (
+        f"{rsvp_link}"
+        f"{separator}usp=pp_url"
+        f"&{rsvp_name_entry}={quote(recipient_name)}"
+    )
 
 
 # =========================
@@ -67,6 +111,27 @@ def send_mail():
     # =========================
 
     email_template = load_template(template_path)
+
+    # =========================
+    # Guard: RSVP Placeholders
+    # =========================
+    #
+    # Stops a batch going out with a dead RSVP button.
+    #
+
+    if "RSVP_LINK_HERE" in email_template and not rsvp_link:
+        print(
+            "Template has an RSVP button but "
+            "rsvp_link is empty. Set it before sending."
+        )
+        return
+
+    if "RSVP_DEADLINE_HERE" in email_template and not rsvp_deadline:
+        print(
+            "Template has an RSVP deadline but "
+            "rsvp_deadline is empty. Set it before sending."
+        )
+        return
 
     # =========================
     # Load Logo
@@ -192,6 +257,21 @@ def send_mail():
             email_content = email_template.replace(
                 "{{Name}}",
                 recipient_name
+            )
+
+            # =========================
+            # Personalize RSVP
+            # =========================
+
+            # "&" must be escaped inside an href attribute
+            email_content = email_content.replace(
+                "RSVP_LINK_HERE",
+                build_rsvp_link(recipient_name).replace("&", "&amp;")
+            )
+
+            email_content = email_content.replace(
+                "RSVP_DEADLINE_HERE",
+                rsvp_deadline
             )
 
             # Replace the logo path from HTML
