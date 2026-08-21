@@ -1,4 +1,5 @@
 import os
+import base64
 import pandas as pd
 
 from decouple import AutoConfig
@@ -6,7 +7,6 @@ from smtplib import SMTP
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 from email.mime.base import MIMEBase
 from email import encoders
 
@@ -18,7 +18,7 @@ config = AutoConfig()
 # Configuration
 # =========================
 
-send_to = "./csv/graduation-dwit.csv"
+send_to = "./csv/extra.csv"
 
 subject = "Invitation | Graduation Ceremony | Class of 2025"
 
@@ -41,6 +41,15 @@ def load_template(path):
         return file.read()
 
 
+def encode_image_to_base64(path):
+    with open(path, "rb") as img_file:
+        encoded_string = base64.b64encode(
+            img_file.read()
+        ).decode("utf-8")
+
+    return encoded_string
+
+
 # =========================
 # Send Emails
 # =========================
@@ -54,66 +63,81 @@ def send_mail():
     password = config("APP_PASSWORD")
 
     # =========================
-    # Load Email Template
+    # Load Template
     # =========================
 
     email_template = load_template(template_path)
 
     # =========================
-    # Check Required Files
+    # Load Logo
     # =========================
 
     if not os.path.exists(logo_path):
         print(f"Logo not found: {logo_path}")
         return
 
-    if not os.path.exists(template_path):
-        print(f"Template not found: {template_path}")
-        return
+    logo_base64 = encode_image_to_base64(logo_path)
 
-    if not os.path.exists(send_to):
-        print(f"CSV file not found: {send_to}")
-        return
+    # CID used inside HTML
+    logo_cid = "logo_image"
 
     # =========================
     # Read CSV
     # =========================
 
+    if not os.path.exists(send_to):
+        print(f"CSV not found: {send_to}")
+        return
+
     df = pd.read_csv(send_to)
 
     print(f"Total emails: {len(df)}")
-    print(f"Sending emails to: {df['Email'].tolist()}")
+    print(
+        f"Sending emails to: "
+        f"{df['Email'].tolist()}"
+    )
 
     # =========================
-    # Connect to Gmail SMTP
+    # Connect to Gmail
     # =========================
 
     with SMTP(host, port) as server:
 
         server.starttls()
 
-        print(f"Trying to log in with {email}")
+        print(
+            f"Trying to log in with {email}"
+        )
 
-        server.login(email, password)
+        server.login(
+            email,
+            password
+        )
 
-        print(f"Logged in with {email}")
+        print(
+            f"Logged in with {email}"
+        )
 
         # =========================
-        # Process Each Recipient
+        # Process Recipients
         # =========================
 
         for index, row in df.iterrows():
 
-            recipient_name = str(row["Name"]).strip()
-            recipient_email = str(row["Email"]).strip()
+            recipient_name = str(
+                row["Name"]
+            ).strip()
+
+            recipient_email = str(
+                row["Email"]
+            ).strip()
 
             print()
-            print("=" * 60)
             print(
-                f"Processing {index + 1}/{len(df)}: "
-                f"{recipient_name} <{recipient_email}>"
+                f"Processing "
+                f"{index + 1}/{len(df)}: "
+                f"{recipient_name}"
             )
-            print("=" * 60)
 
             # =========================
             # Personalized Invitation
@@ -124,11 +148,11 @@ def send_mail():
                 f"{recipient_name}.png"
             )
 
-            # Check personalized image
             if not os.path.exists(image_filename):
 
                 print(
-                    f"Image not found for {recipient_name}: "
+                    f"Image not found for "
+                    f"{recipient_name}: "
                     f"{image_filename}"
                 )
 
@@ -148,19 +172,16 @@ def send_mail():
                 continue
 
             # =========================
-            # Create Main Email
-            # =========================
-            #
-            # multipart/mixed allows us to have:
-            #
-            #   1. HTML email with inline images
-            #   2. Actual file attachments
-            #
+            # Create Email
             # =========================
 
-            msg = MIMEMultipart("mixed")
+            msg = MIMEMultipart()
 
-            msg["From"] = f"Graduation Ceremony <{email}>"
+            msg["From"] = (
+                f"Graduation Ceremony "
+                f"<{email}>"
+            )
+
             msg["To"] = recipient_email
             msg["Subject"] = subject
 
@@ -173,75 +194,30 @@ def send_mail():
                 recipient_name
             )
 
-            # =========================
-            # Create RELATED Container
-            # =========================
+            # Replace the logo path from HTML
             #
-            # This container holds:
+            # Your HTML should contain:
             #
-            #   HTML
-            #   Inline images referenced using CID
+            # ../images/logo/Logo.png
             #
-            # =========================
-
-            related = MIMEMultipart("related")
+            # or the corresponding path you currently use.
+            #
+            email_content = email_content.replace(
+                "../images/logo/Logo.png",
+                f"cid:{logo_cid}"
+            )
 
             # =========================
             # Attach HTML
             # =========================
 
-            html_part = MIMEText(
-                email_content,
-                "html",
-                "utf-8"
+            msg.attach(
+                MIMEText(
+                    email_content,
+                    "html",
+                    "utf-8"
+                )
             )
-
-            related.attach(html_part)
-
-            # =========================
-            # Embed Logo
-            # =========================
-
-            with open(logo_path, "rb") as logo_file:
-
-                logo_part = MIMEImage(
-                    logo_file.read(),
-                    _subtype="png"
-                )
-
-                # This MUST match:
-                #
-                # <img src="cid:logo_image">
-                #
-                logo_part.add_header(
-                    "Content-ID",
-                    "<logo_image>"
-                )
-
-                # Tell email clients this is an inline resource
-                logo_part.add_header(
-                    "Content-Disposition",
-                    "inline",
-                    filename="logo.png"
-                )
-
-                # Optional but useful
-                logo_part.add_header(
-                    "Content-Location",
-                    "logo.png"
-                )
-
-                related.attach(logo_part)
-
-            print(
-                f"Embedded logo for {recipient_name}"
-            )
-
-            # =========================
-            # Attach RELATED Section
-            # =========================
-
-            msg.attach(related)
 
             # =========================
             # Attach Personalized Card
@@ -252,20 +228,20 @@ def send_mail():
                 "rb"
             ) as attachment:
 
-                invitation_part = MIMEBase(
+                part = MIMEBase(
                     "application",
                     "octet-stream"
                 )
 
-                invitation_part.set_payload(
+                part.set_payload(
                     attachment.read()
                 )
 
                 encoders.encode_base64(
-                    invitation_part
+                    part
                 )
 
-                invitation_part.add_header(
+                part.add_header(
                     "Content-Disposition",
                     "attachment",
                     filename=os.path.basename(
@@ -273,10 +249,48 @@ def send_mail():
                     )
                 )
 
-                msg.attach(invitation_part)
+                msg.attach(part)
 
             print(
-                f"Attached invitation for "
+                f"Attached personalized "
+                f"image for {recipient_name}"
+            )
+
+            # =========================
+            # Embed Logo
+            # =========================
+
+            logo_part = MIMEBase(
+                "image",
+                "png",
+                filename="logo.png"
+            )
+
+            logo_part.set_payload(
+                base64.b64decode(
+                    logo_base64
+                )
+            )
+
+            encoders.encode_base64(
+                logo_part
+            )
+
+            logo_part.add_header(
+                "Content-ID",
+                f"<{logo_cid}>"
+            )
+
+            logo_part.add_header(
+                "Content-Disposition",
+                "inline",
+                filename="logo.png"
+            )
+
+            msg.attach(logo_part)
+
+            print(
+                f"Embedded logo for "
                 f"{recipient_name}"
             )
 
@@ -293,13 +307,13 @@ def send_mail():
                 )
 
                 print(
-                    f"Email sent successfully to "
+                    f"Email sent to "
                     f"{recipient_name} "
-                    f"({recipient_email})"
+                    f"at {recipient_email}"
                 )
 
                 # =========================
-                # Log Successful Email
+                # Log Success
                 # =========================
 
                 with open(
@@ -319,13 +333,11 @@ def send_mail():
                 print(
                     f"Failed to send email to "
                     f"{recipient_name} "
-                    f"({recipient_email})"
+                    f"at {recipient_email}: {e}"
                 )
 
-                print(f"Error: {e}")
-
                 # =========================
-                # Log Failed Email
+                # Log Failure
                 # =========================
 
                 with open(
@@ -342,9 +354,7 @@ def send_mail():
                     )
 
     print()
-    print("=" * 60)
     print("All emails processed")
-    print("=" * 60)
 
 
 # =========================
@@ -353,9 +363,6 @@ def send_mail():
 
 if __name__ == "__main__":
 
-    print()
-    print("=" * 60)
     print("Sending graduation invitations...")
-    print("=" * 60)
 
     send_mail()
