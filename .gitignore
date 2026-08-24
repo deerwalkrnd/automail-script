@@ -1,2 +1,7 @@
-.env
 csv/
+images/
+credentials.json
+token.json
+.env
+sent.csv
+failed.csv
