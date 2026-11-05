@@ -1,24 +1,19 @@
-# DeerUtsav Invitations
+# 9th IT4D Conference invitations
 
-Simple Python script to send personalized invitation emails for DeerUtsav 10.0.
+This mailer sends the invitation for the 9th IT4D Conference, themed “AI in Learning and Beyond.” It personalizes the greeting from each recipient’s `Name` and `Email` columns, embeds `images/logo/logo_it4d.png`, and links to the conference registration page.
 
-Getting started
+## Before sending
 
-- Configure environment variables (used with `python-decouple`). Create a `.env` file in the project root with:
+- Check the recipient list at `csv/extra.csv` (`Name,Email` columns). Change `RECIPIENTS_PATH` in `script.py` if a different list should receive the invitation.
+- To send over Gmail SMTP, put `APP_EMAIL` and `APP_PASSWORD` in the ignored `.env` file. The app password is preferred when both passwords are configured. If you have no app password, `EMAIL_PASSWORD` can be used as a fallback.
+- If neither password is configured, the mailer uses Gmail OAuth with `credentials.json` and saves its token in `token.json`.
+- `.env.example` shows the supported configuration names. Keep real passwords in `.env`, not in the example file.
+- Review `templates/index.html` and the registration link before sending.
 
-```
-APP_EMAIL=your.email@example.com
-APP_PASSWORD=your-email-password-or-app-password
-```
-
-- Prepare your data and images in the existing `csv/` and `images/` folders. The template is at `templates/index.html`.
-
-- Run the script:
+Run from the project folder:
 
 ```bash
 python script.py
 ```
 
-Notes
-- Large binary images in `images/` may make the repository large. If you plan to keep many high-resolution invitation images in the repo, consider using Git LFS.
-- The script writes runtime files `sent.csv` and `failed.csv` to the project root; those files are ignored by `.gitignore`.
+Successful and failed deliveries are appended to `sent.csv` and `failed.csv`.
