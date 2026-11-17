@@ -21,7 +21,7 @@ INVITATION_PATH = "./images/it4d/"
 TOKEN_PATH = "./token.json"
 RECIPIENTS_PATH = "./csv/newguestlist.csv"
 TEMPLATE_PATH = "./templates/index.html"
-LOGO_PATH = "./images/logo/logo_it4d.png"
+LOGO_PATH = "./logo_it4d.png"
 SUBJECT = "Invitation to attend the 9th IT4D Conference"
 SENDER_EMAIL = "administration@deerwalk.edu.np"
 
