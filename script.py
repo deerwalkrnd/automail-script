@@ -105,11 +105,14 @@ def create_email(
         MIMEText(
             f"""Dear {recipient_name or 'there'},
 
-Just a gentle reminder of our invitation to join us at the 9th IT4D Conference on November 20, 2026.
+We are pleased to invite you to attend the 9th IT4D Conference, on 20 November 2026 at Deerwalk Institute of Technology, Kathmandu.
+
+This year's theme, "AI in Learning and Beyond," brings together researchers, academics, industry professionals, and technology experts to share ideas and discuss the evolving role of AI.
 
 Registration Time: 8:00 AM - 9:00 AM
 
-We would be honoured by your presence and look forward to welcoming you.
+We would be delighted to have you join us and be part of the discussions.
+We look forward to welcoming you!
 To confirm your participation, please click on the RSVP button below.
 RSVP: https://docs.google.com/forms/d/e/1FAIpQLSdLKQkXUzYShyzvo130K0x6ZB7g4dfzHtoD5P4vJz4jYBnq3Q/viewform
 
