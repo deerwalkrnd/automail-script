@@ -5,3 +5,4 @@ token.json
 .env
 sent.csv
 failed.csv
+venv/

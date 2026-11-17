@@ -5,8 +5,6 @@ import ssl
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 
 import pandas as pd
 from google.auth.transport.requests import Request
@@ -17,13 +15,13 @@ from googleapiclient.discovery import build
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 CREDENTIALS_PATH = "./credentials.json"
-INVITATION_PATH = "./images/it4d/"
 TOKEN_PATH = "./token.json"
 RECIPIENTS_PATH = "./csv/newguestlist.csv"
 TEMPLATE_PATH = "./templates/index.html"
 LOGO_PATH = "./logo_it4d.png"
-SUBJECT = "Invitation to attend the 9th IT4D Conference"
+SUBJECT = "Reminder: 9th IT4D Conference on November 20, 2026"
 SENDER_EMAIL = "administration@deerwalk.edu.np"
+CC_EMAIL = "pravin.thapalia@deerwalk.edu.np"
 
 
 def load_dotenv(path=".env"):
@@ -85,11 +83,11 @@ def create_email(
     recipient_email,
     recipient_name,
     email_template,
-    invitation_path,
 ):
     msg = MIMEMultipart("related")
     msg["From"] = f"IT4D Conference <{sender_email}>"
     msg["To"] = recipient_email
+    msg["Cc"] = CC_EMAIL
     msg["Subject"] = SUBJECT
 
     safe_name = (
@@ -107,11 +105,13 @@ def create_email(
         MIMEText(
             f"""Dear {recipient_name or 'there'},
 
-You are invited to the 9th IT4D Conference, 20–21 November 2026 at Deerwalk Institute of Technology, Kathmandu, Nepal.
+Just a gentle reminder of our invitation to join us at the 9th IT4D Conference on November 20, 2026.
 
-Theme: AI in Learning and Beyond.
+Registration Time: 8:00 AM - 9:00 AM
 
-Register: https://it4d.org/conference/register
+We would be honoured by your presence and look forward to welcoming you.
+To confirm your participation, please click on the RSVP button below.
+RSVP: https://docs.google.com/forms/d/e/1FAIpQLSdLKQkXUzYShyzvo130K0x6ZB7g4dfzHtoD5P4vJz4jYBnq3Q/viewform
 
 Warm regards,
 Kumar Lamichhane""",
@@ -123,22 +123,6 @@ Kumar Lamichhane""",
     alternative.attach(MIMEText(html, "html", "utf-8"))
     msg.attach(alternative)
 
-    # Attach personalized invitation card
-    with open(invitation_path, "rb") as attachment:
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload(attachment.read())
-
-    encoders.encode_base64(part)
-
-    part.add_header(
-        "Content-Disposition",
-        "attachment",
-        filename=os.path.basename(invitation_path),
-    )
-
-    msg.attach(part)
-
-    # Embed logo
     with open(LOGO_PATH, "rb") as logo_file:
         logo = MIMEImage(
             logo_file.read(),
@@ -169,10 +153,6 @@ def send_mail():
         if not os.path.exists(path):
             raise FileNotFoundError(f"Required file not found: {path}")
 
-    if not os.path.isdir(INVITATION_PATH):
-        raise FileNotFoundError(
-            f"Invitation cards directory not found: {INVITATION_PATH}"
-        )
     df = pd.read_csv(RECIPIENTS_PATH)
     if not {"Name", "Email"}.issubset(df.columns):
         raise ValueError(f"{RECIPIENTS_PATH} must contain Name and Email columns")
@@ -201,27 +181,11 @@ def send_mail():
             print(f"Skipping row {index + 1}: missing email")
             continue
         try:
-            invitation_file = os.path.join(
-                INVITATION_PATH,
-                f"{name}.png"
-            )
-
-            if not os.path.exists(invitation_file):
-                print(f"Skipping {email}: invitation card not found: {invitation_file}")
-
-                with open("failed.csv", "a", encoding="utf-8") as log:
-                    log.write(
-                        f'"{name}","{email}","{invitation_file}","Image not found"\n'
-                    )
-
-                continue
-
             message = create_email(
                 sender_email=sender_email,
                 recipient_email=email,
                 recipient_name=name,
                 email_template=template,
-                invitation_path=invitation_file,
             )
             if use_smtp:
                 transport.send_message(message)
